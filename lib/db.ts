@@ -371,23 +371,51 @@ export async function getDebtSummary(): Promise<UserDebtSummary[]> {
 async function getUnpaidParticipantsInDateRange(
   dateRange: DateRange | null
 ): Promise<ParticipantWithDetails[]> {
-  let query = supabase
+  // If no date range, get all unpaid participants
+  if (!dateRange) {
+    const { data, error } = await supabase
+      .from('participants')
+      .select(`
+        *,
+        session:sessions (*),
+        user:users (*)
+      `)
+      .eq('is_paid', false)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data as ParticipantWithDetails[]) || [];
+  }
+
+  // Use YYYY-MM-DD format to avoid timezone conversion issues
+  const startDate = dateRange.start.toISOString().split('T')[0];
+  const endDate = dateRange.end.toISOString().split('T')[0];
+
+  // First, get session IDs within the date range
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('sessions')
+    .select('id')
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (sessionsError) throw sessionsError;
+
+  const sessionIds = sessions?.map(s => s.id) || [];
+  if (sessionIds.length === 0) {
+    return []; // No sessions in this date range
+  }
+
+  // Then, get unpaid participants for those sessions
+  const { data, error } = await supabase
     .from('participants')
     .select(`
       *,
       session:sessions (*),
       user:users (*)
     `)
-    .eq('is_paid', false);
-
-  // Apply date filtering if a range is provided
-  if (dateRange) {
-    query = query
-      .gte('session.date', dateRange.start.toISOString())
-      .lte('session.date', dateRange.end.toISOString());
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
+    .eq('is_paid', false)
+    .in('session_id', sessionIds)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return (data as ParticipantWithDetails[]) || [];

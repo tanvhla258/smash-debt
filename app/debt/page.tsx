@@ -10,9 +10,41 @@ import type { UserDebtSummary } from '@/lib/db-types';
 import { getDebtSummaryByPeriod, updateParticipantPaid } from '@/lib/db';
 import { CheckCircle, Circle, Coins, Calendar } from 'lucide-react';
 import { getDateRange, getPeriodLabel, formatDateRange, type TimePeriod } from '@/lib/dateFilters';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth-context';
+
+// Helper to get initials from name
+function getInitials(name: string): string {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+// Helper to generate a consistent color based on name
+function getAvatarColor(name: string): string {
+  const colors = [
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-green-500',
+    'bg-emerald-500',
+    'bg-teal-500',
+    'bg-cyan-500',
+    'bg-blue-500',
+    'bg-indigo-500',
+    'bg-violet-500',
+    'bg-purple-500',
+    'bg-pink-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
 
 const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
   { value: 'week', label: 'This Week' },
@@ -190,12 +222,31 @@ export default function DebtPage() {
                     onClick={() => toggleUserExpanded(userDebt.user.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl">{userDebt.user.name}</CardTitle>
-                        <CardDescription>
-                          {userDebt.unpaid_participants.length} unpaid session
-                          {userDebt.unpaid_participants.length !== 1 ? 's' : ''}
-                        </CardDescription>
+                      <div className="flex items-center gap-3">
+                        {/* Avatar with image or initials */}
+                        {userDebt.user.avatar_url ? (
+                          <img
+                            src={userDebt.user.avatar_url}
+                            alt={userDebt.user.name}
+                            className="flex-shrink-0 w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium text-white',
+                              getAvatarColor(userDebt.user.name)
+                            )}
+                          >
+                            {getInitials(userDebt.user.name)}
+                          </div>
+                        )}
+                        <div>
+                          <CardTitle className="text-xl">{userDebt.user.name}</CardTitle>
+                          <CardDescription>
+                            {userDebt.unpaid_participants.length} unpaid session
+                            {userDebt.unpaid_participants.length !== 1 ? 's' : ''}
+                          </CardDescription>
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-destructive">
@@ -220,46 +271,51 @@ export default function DebtPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {userDebt.unpaid_participants.map((participant) => (
-                            <TableRow key={participant.id}>
-                              <TableCell>
-                                {format(new Date(participant.session.date), 'MMM dd, yyyy')}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {participant.session.note || '-'}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatCurrency(participant.amount_per_person)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {user ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handlePaymentToggle(participant.id, participant.is_paid);
-                                    }}
-                                    className="hover:bg-green-500/10 hover:text-green-600"
-                                  >
-                                    {participant.is_paid ? (
-                                      <CheckCircle className="h-5 w-5 text-green-600" />
-                                    ) : (
-                                      <Circle className="h-5 w-5" />
-                                    )}
-                                  </Button>
-                                ) : (
-                                  <div className="flex justify-center">
-                                    {participant.is_paid ? (
-                                      <CheckCircle className="h-5 w-5 text-green-600" />
-                                    ) : (
-                                      <Circle className="h-5 w-5" />
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {userDebt.unpaid_participants.map((participant) => {
+                            // Skip if session data is missing (shouldn't happen after fix)
+                            if (!participant.session) return null;
+
+                            return (
+                              <TableRow key={participant.id}>
+                                <TableCell>
+                                  {format(new Date(participant.session.date), 'MMM dd, yyyy')}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {participant.session.note || '-'}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatCurrency(participant.amount_per_person)}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {user ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePaymentToggle(participant.id, participant.is_paid);
+                                      }}
+                                      className="hover:bg-green-500/10 hover:text-green-600"
+                                    >
+                                      {participant.is_paid ? (
+                                        <CheckCircle className="h-5 w-5 text-green-600" />
+                                      ) : (
+                                        <Circle className="h-5 w-5" />
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <div className="flex justify-center">
+                                      {participant.is_paid ? (
+                                        <CheckCircle className="h-5 w-5 text-green-600" />
+                                      ) : (
+                                        <Circle className="h-5 w-5" />
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </CardContent>
