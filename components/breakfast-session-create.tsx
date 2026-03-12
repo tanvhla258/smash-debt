@@ -12,7 +12,6 @@ export function BreakfastSessionCreate({ onSuccess }: BreakfastSessionCreateProp
   return (
     <CreateSessionDialog
       defaultNote="An sáng"
-      defaultParticipants="all"
       trigger={<Button className="gap-2" variant="secondary"><Coffee className="w-4 h-4" />Breakfast</Button>}
       onSuccess={onSuccess}
     />
