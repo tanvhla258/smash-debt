@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getActiveUsers, getSessions, createSession } from '@/lib/db';
+import { getActiveUsers, getSessions, createSession, deleteSession } from '@/lib/db';
 import type { User, SessionWithParticipants } from '@/lib/db-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,16 +24,53 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PlusCircle, Calendar, DollarSign, Users, FileText } from 'lucide-react';
+import { PlusCircle, Calendar, DollarSign, Users, FileText, Trash2 } from 'lucide-react';
 import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
+import { useAuth } from '@/lib/auth-context';
+import { formatCurrency, cn } from '@/lib/utils';
+
+// Helper to get initials from name
+function getInitials(name: string): string {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+// Helper to generate a consistent color based on name
+function getAvatarColor(name: string): string {
+  const colors = [
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-green-500',
+    'bg-emerald-500',
+    'bg-teal-500',
+    'bg-cyan-500',
+    'bg-blue-500',
+    'bg-indigo-500',
+    'bg-violet-500',
+    'bg-purple-500',
+    'bg-pink-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
 
 export default function SessionsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<SessionWithParticipants[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<SessionWithParticipants | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +106,12 @@ export default function SessionsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!user) {
+      addToast('Please login to create sessions', 'error');
+      router.push('/login');
+      return;
+    }
 
     if (selectedUserIds.length === 0) {
       setError('Please select at least one participant');
@@ -108,17 +151,40 @@ export default function SessionsPage() {
     }
   }
 
+  async function handleDeleteSession(sessionId: string, e: React.MouseEvent) {
+    e.stopPropagation(); // Prevent card click
+
+    if (!user) {
+      addToast('Please login to delete sessions', 'error');
+      return;
+    }
+
+    // Find the session and open confirmation dialog
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setSessionToDelete(session);
+      setIsDeleteDialogOpen(true);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!sessionToDelete) return;
+
+    try {
+      await deleteSession(sessionToDelete.id);
+      addToast('Session deleted', 'success');
+      setIsDeleteDialogOpen(false);
+      setSessionToDelete(null);
+      await loadData();
+    } catch (err) {
+      addToast('Failed to delete session', 'error');
+    }
+  }
+
   function toggleUser(userId: string) {
     setSelectedUserIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
-  }
-
-  function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   }
 
   function formatDate(dateStr: string): string {
@@ -143,6 +209,7 @@ export default function SessionsPage() {
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Sessions</h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
             Manage badminton sessions and track participants
+            {!user && ' (read-only mode - login to create)'}
           </p>
         </div>
 
@@ -155,13 +222,14 @@ export default function SessionsPage() {
 
         {/* Actions */}
         <div className="mb-6">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger>
-              <Button className="gap-2">
-                <PlusCircle className="w-4 h-4" />
-                New Session
-              </Button>
-            </DialogTrigger>
+          {user && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger>
+                <Button className="gap-2">
+                  <PlusCircle className="w-4 h-4" />
+                  New Session
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
@@ -282,6 +350,7 @@ export default function SessionsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Sessions List */}
@@ -296,10 +365,12 @@ export default function SessionsPage() {
             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
               Create your first badminton session to start tracking.
             </p>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-              <PlusCircle className="w-4 h-4" />
-              Create First Session
-            </Button>
+            {user && (
+              <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                <PlusCircle className="w-4 h-4" />
+                Create First Session
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -317,13 +388,26 @@ export default function SessionsPage() {
                         <CardDescription className="mt-1">{session.note}</CardDescription>
                       )}
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                        {formatCurrency(session.total_amount)}
-                      </p>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {session.participants.length} participant{session.participants.length !== 1 ? 's' : ''}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {user && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Delete session"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                          {formatCurrency(session.total_amount)}
+                        </p>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                          {session.participants.length} participant{session.participants.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -336,12 +420,29 @@ export default function SessionsPage() {
                       {session.participants.map((participant) => (
                         <span
                           key={participant.id}
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm ${
                             participant.is_paid
                               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                               : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                           }`}
                         >
+                          {/* Avatar with image or initials */}
+                          {participant.user.avatar_url ? (
+                            <img
+                              src={participant.user.avatar_url}
+                              alt={participant.user.name}
+                              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div
+                              className={cn(
+                                'w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-medium text-white flex-shrink-0',
+                                getAvatarColor(participant.user.name)
+                              )}
+                            >
+                              {getInitials(participant.user.name)}
+                            </div>
+                          )}
                           {participant.user.name}
                           <span className="text-xs opacity-70">
                             ({formatCurrency(participant.amount_per_person)})
@@ -356,6 +457,41 @@ export default function SessionsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this session? This action cannot be undone.
+              {sessionToDelete && (
+                <span className="block mt-2 font-medium text-zinc-900 dark:text-zinc-100">
+                  {formatDate(sessionToDelete.date)} - {formatCurrency(sessionToDelete.total_amount)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setSessionToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isSubmitting}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

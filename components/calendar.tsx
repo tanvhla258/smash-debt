@@ -1,34 +1,34 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday } from 'date-fns';
 import { Button } from '@/components/ui/button';
 
 interface CalendarProps {
-  currentWeek: Date;
-  onWeekChange: (date: Date) => void;
+  currentMonth: Date;
+  onMonthChange: (date: Date) => void;
   renderDay: (date: Date) => React.ReactNode;
 }
 
-export function Calendar({ currentWeek, onWeekChange, renderDay }: CalendarProps) {
-  const weekStart: Date = startOfWeek(currentWeek, { weekStartsOn: 0 });
-  const weekEnd: Date = endOfWeek(currentWeek, { weekStartsOn: 0 });
-  const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
+export function Calendar({ currentMonth, onMonthChange, renderDay }: CalendarProps) {
+  const monthStart: Date = startOfMonth(currentMonth);
+  const monthEnd: Date = endOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const goToPreviousWeek = () => {
-    const previousWeek = new Date(currentWeek);
-    previousWeek.setDate(previousWeek.getDate() - 7);
-    onWeekChange(previousWeek);
+  const goToPreviousMonth = () => {
+    const previousMonth = new Date(currentMonth);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+    onMonthChange(previousMonth);
   };
 
-  const goToNextWeek = () => {
-    const nextWeek = new Date(currentWeek);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    onWeekChange(nextWeek);
+  const goToNextMonth = () => {
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    onMonthChange(nextMonth);
   };
 
   const goToToday = () => {
-    onWeekChange(new Date());
+    onMonthChange(new Date());
   };
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -39,7 +39,7 @@ export function Calendar({ currentWeek, onWeekChange, renderDay }: CalendarProps
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            {format(weekStart, 'MMM dd')} - {format(weekEnd, 'MMM dd, yyyy')}
+            {format(monthStart, 'MMMM yyyy')}
           </h2>
           <Button
             variant="ghost"
@@ -54,7 +54,7 @@ export function Calendar({ currentWeek, onWeekChange, renderDay }: CalendarProps
           <Button
             variant="ghost"
             size="icon"
-            onClick={goToPreviousWeek}
+            onClick={goToPreviousMonth}
             className="h-8 w-8"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function Calendar({ currentWeek, onWeekChange, renderDay }: CalendarProps
           <Button
             variant="ghost"
             size="icon"
-            onClick={goToNextWeek}
+            onClick={goToNextMonth}
             className="h-8 w-8"
           >
             <ChevronRight className="h-4 w-4" />
@@ -82,9 +82,9 @@ export function Calendar({ currentWeek, onWeekChange, renderDay }: CalendarProps
         ))}
       </div>
 
-      {/* Calendar Grid - Single Week */}
+      {/* Calendar Grid - Month */}
       <div className="grid grid-cols-7">
-        {daysInWeek.map((date) => {
+        {daysInMonth.map((date) => {
           const dayIsToday = isToday(date);
           return (
             <div

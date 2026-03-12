@@ -33,6 +33,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { UserPlus, Search, Check, Upload, X, Camera } from 'lucide-react';
 import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
+import { useAuth } from '@/lib/auth-context';
 
 // Helper function to get initials from name
 function getInitials(name: string): string {
@@ -75,6 +76,7 @@ function getNameColor(name: string): string {
 }
 
 export default function UsersPage() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -109,6 +111,11 @@ export default function UsersPage() {
     e.preventDefault();
     if (!newUserName.trim()) return;
 
+    if (!user) {
+      addToast('Please login to add users', 'error');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
@@ -126,6 +133,11 @@ export default function UsersPage() {
   }
 
   async function handleToggleActive(user: User) {
+    if (!user) {
+      addToast('Please login to manage users', 'error');
+      return;
+    }
+
     try {
       setError(null);
       await updateUserActive(user.id, !user.is_active);
@@ -201,6 +213,7 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Users</h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
             Manage badminton participants
+            {!user && ' (read-only mode - login to edit)'}
           </p>
         </div>
 
@@ -213,13 +226,14 @@ export default function UsersPage() {
 
         {/* Actions */}
         <div className="mb-6 flex justify-between items-center">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger>
-              <Button className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                Add User
-              </Button>
-            </DialogTrigger>
+          {user && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger>
+                <Button className="gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Add User
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleAddUser}>
                 <DialogHeader>
@@ -255,6 +269,7 @@ export default function UsersPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Users Table */}
@@ -269,10 +284,12 @@ export default function UsersPage() {
             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
               Add your first participant to get started.
             </p>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              Add First User
-            </Button>
+            {user && (
+              <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add First User
+              </Button>
+            )}
           </div>
         ) : (
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -281,30 +298,32 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {user && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
+                {users.map((currentUser) => (
+                  <TableRow key={currentUser.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="relative group">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
-                            <AvatarFallback className={getNameColor(user.name)}>
-                              {getInitials(user.name)}
+                            <AvatarImage src={currentUser.avatar_url || undefined} alt={currentUser.name} />
+                            <AvatarFallback className={getNameColor(currentUser.name)}>
+                              {getInitials(currentUser.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <button
-                            onClick={() => setAvatarUploadUser(user)}
-                            className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                            title="Change avatar"
-                          >
-                            <Camera className="w-4 h-4 text-white" />
-                          </button>
+                          {user && (
+                            <button
+                              onClick={() => setAvatarUploadUser(currentUser)}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              title="Change avatar"
+                            >
+                              <Camera className="w-4 h-4 text-white" />
+                            </button>
+                          )}
                         </div>
-                        <span className="font-medium">{user.name}</span>
+                        <span className="font-medium">{currentUser.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -313,29 +332,31 @@ export default function UsersPage() {
                         Active
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {user.avatar_url && (
+                    {user && (
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {currentUser.avatar_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteAvatar(currentUser)}
+                              className="text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
+                              title="Remove avatar"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteAvatar(user)}
+                            onClick={() => handleToggleActive(currentUser)}
                             className="text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
-                            title="Remove avatar"
                           >
-                            <X className="w-4 h-4" />
+                            Deactivate
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(user)}
-                          className="text-zinc-600 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
-                        >
-                          Deactivate
-                        </Button>
-                      </div>
-                    </TableCell>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

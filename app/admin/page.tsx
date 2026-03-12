@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import Link from 'next/link';
 import { Navigation } from '@/components/navigation';
 import { Calendar } from '@/components/calendar';
@@ -9,8 +9,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { getSessions, updateParticipantPaid } from '@/lib/db';
 import type { SessionWithParticipants } from '@/lib/db-types';
 import { useToast } from '@/components/toast';
-import { CheckCircle, Circle, Users, ExternalLink } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CheckCircle, Circle, Users, ExternalLink, Lock } from 'lucide-react';
+import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 // Helper to get initials from name
 function getInitials(name: string): string {
@@ -45,11 +46,13 @@ function getAvatarColor(name: string): string {
 }
 
 export default function AdminPage() {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [sessions, setSessions] = useState<SessionWithParticipants[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     loadSessions();
@@ -73,6 +76,11 @@ export default function AdminPage() {
     currentStatus: boolean,
     userName: string
   ) {
+    if (!isAuthenticated) {
+      addToast('Please login to edit payment status', 'error');
+      return;
+    }
+
     try {
       await updateParticipantPaid(participantId, !currentStatus);
       await loadSessions();
@@ -129,7 +137,7 @@ export default function AdminPage() {
 
           {/* Amount per person */}
           <div className="text-blue-700 dark:text-blue-300 mb-1.5 font-semibold">
-            ${amountPerPerson.toFixed(2)} / person
+            {formatCurrency(amountPerPerson)} / person
           </div>
 
           {/* Participants list */}
@@ -137,7 +145,12 @@ export default function AdminPage() {
             {session.participants.map((participant) => (
               <div
                 key={participant.id}
-                className="flex items-center gap-1.5 hover:bg-blue-200/50 dark:hover:bg-blue-800/50 rounded px-1 py-0.5 cursor-pointer transition-colors"
+                className={cn(
+                  'flex items-center gap-1.5 rounded px-1 py-0.5 transition-colors',
+                  isAuthenticated
+                    ? 'hover:bg-blue-200/50 dark:hover:bg-blue-800/50 cursor-pointer'
+                    : 'opacity-75 cursor-not-allowed'
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
                   handlePaymentToggle(
@@ -146,23 +159,34 @@ export default function AdminPage() {
                     participant.user.name
                   );
                 }}
+                title={isAuthenticated ? 'Click to toggle payment' : 'Login to edit'}
               >
-                {/* Checkbox */}
-                <Checkbox
-                  checked={participant.is_paid}
-                  readOnly
-                  className="h-3 w-3 pointer-events-none flex-shrink-0"
-                />
+                {/* Checkbox - only show for authenticated users */}
+                {isAuthenticated && (
+                  <Checkbox
+                    checked={participant.is_paid}
+                    readOnly
+                    className="h-3 w-3 pointer-events-none flex-shrink-0"
+                  />
+                )}
 
-                {/* Avatar with initials */}
-                <div
-                  className={cn(
-                    'flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-medium text-white',
-                    getAvatarColor(participant.user.name)
-                  )}
-                >
-                  {getInitials(participant.user.name)}
-                </div>
+                {/* Avatar with image or initials */}
+                {participant.user.avatar_url ? (
+                  <img
+                    src={participant.user.avatar_url}
+                    alt={participant.user.name}
+                    className="flex-shrink-0 w-4 h-4 rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      'flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-medium text-white',
+                      getAvatarColor(participant.user.name)
+                    )}
+                  >
+                    {getInitials(participant.user.name)}
+                  </div>
+                )}
 
                 {/* Name */}
                 <span
@@ -237,14 +261,21 @@ export default function AdminPage() {
             <Circle className="h-4 w-4 text-zinc-400" />
             <span className="text-zinc-600 dark:text-zinc-400">Unpaid</span>
           </div>
-          <div className="ml-auto text-zinc-500 dark:text-zinc-400 text-xs">
-            Click participant to toggle payment
+          <div className="ml-auto text-zinc-500 dark:text-zinc-400 text-xs flex items-center gap-2">
+            {isAuthenticated ? (
+              <>Click participant to toggle payment</>
+            ) : (
+              <>
+                <Lock className="h-3 w-3" />
+                Read-only mode - Login to edit
+              </>
+            )}
           </div>
         </div>
 
         <Calendar
-          currentWeek={currentWeek}
-          onWeekChange={setCurrentWeek}
+          currentMonth={currentMonth}
+          onMonthChange={setCurrentMonth}
           renderDay={renderDaySessions}
         />
 
@@ -263,44 +294,42 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
             <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1">
               <Circle className="h-4 w-4 text-amber-600" />
-              Unpaid This Week
+              Unpaid This Month
             </div>
             <div className="text-2xl font-bold text-amber-600">
-              ${sessions
-                .filter((s) => {
-                  const sessionDate = new Date(s.date);
-                  const weekStart = new Date(currentWeek);
-                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                  const weekEnd = new Date(weekStart);
-                  weekEnd.setDate(weekEnd.getDate() + 6);
-                  return sessionDate >= weekStart && sessionDate <= weekEnd;
-                })
-                .flatMap((s) => s.participants)
-                .filter((p) => !p.is_paid)
-                .reduce((sum, p) => sum + p.amount_per_person, 0)
-                .toFixed(2)}
+              {formatCurrency(
+                sessions
+                  .filter((s) => {
+                    const sessionDate = new Date(s.date);
+                    const monthStart = startOfMonth(currentMonth);
+                    const monthEnd = endOfMonth(currentMonth);
+                    return sessionDate >= monthStart && sessionDate <= monthEnd;
+                  })
+                  .flatMap((s) => s.participants)
+                  .filter((p) => !p.is_paid)
+                  .reduce((sum, p) => sum + p.amount_per_person, 0)
+              )}
             </div>
           </div>
 
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
             <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Collected This Week
+              Collected This Month
             </div>
             <div className="text-2xl font-bold text-green-600">
-              ${sessions
-                .filter((s) => {
-                  const sessionDate = new Date(s.date);
-                  const weekStart = new Date(currentWeek);
-                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                  const weekEnd = new Date(weekStart);
-                  weekEnd.setDate(weekEnd.getDate() + 6);
-                  return sessionDate >= weekStart && sessionDate <= weekEnd;
-                })
-                .flatMap((s) => s.participants)
-                .filter((p) => p.is_paid)
-                .reduce((sum, p) => sum + p.amount_per_person, 0)
-                .toFixed(2)}
+              {formatCurrency(
+                sessions
+                  .filter((s) => {
+                    const sessionDate = new Date(s.date);
+                    const monthStart = startOfMonth(currentMonth);
+                    const monthEnd = endOfMonth(currentMonth);
+                    return sessionDate >= monthStart && sessionDate <= monthEnd;
+                  })
+                  .flatMap((s) => s.participants)
+                  .filter((p) => p.is_paid)
+                  .reduce((sum, p) => sum + p.amount_per_person, 0)
+              )}
             </div>
           </div>
         </div>

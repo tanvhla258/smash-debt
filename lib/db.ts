@@ -241,6 +241,15 @@ export async function updateSessionNote(
   return data;
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('sessions')
+    .delete()
+    .eq('id', sessionId);
+
+  if (error) throw error;
+}
+
 // ============ PARTICIPANT OPERATIONS ============
 
 export async function updateParticipantPaid(

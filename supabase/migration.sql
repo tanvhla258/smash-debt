@@ -53,6 +53,10 @@ CREATE POLICY "Enable insert for all users" ON users
 CREATE POLICY "Enable update for all users" ON users
   FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Enable delete for all users" ON users;
+CREATE POLICY "Enable delete for all users" ON users
+  FOR DELETE USING (true);
+
 -- Sessions table policies
 CREATE POLICY "Enable read access for all sessions" ON sessions
   FOR SELECT USING (true);
@@ -63,6 +67,10 @@ CREATE POLICY "Enable insert for all sessions" ON sessions
 CREATE POLICY "Enable update for all sessions" ON sessions
   FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Enable delete for all sessions" ON sessions;
+CREATE POLICY "Enable delete for all sessions" ON sessions
+  FOR DELETE USING (true);
+
 -- Participants table policies
 CREATE POLICY "Enable read access for all participants" ON participants
   FOR SELECT USING (true);
@@ -72,3 +80,7 @@ CREATE POLICY "Enable insert for all participants" ON participants
 
 CREATE POLICY "Enable update for all participants" ON participants
   FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Enable delete for all participants" ON participants;
+CREATE POLICY "Enable delete for all participants" ON participants
+  FOR DELETE USING (true);

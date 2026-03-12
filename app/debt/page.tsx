@@ -11,6 +11,7 @@ import { getDebtSummaryByPeriod, updateParticipantPaid } from '@/lib/db';
 import { CheckCircle, Circle, DollarSign, Calendar } from 'lucide-react';
 import { getDateRange, getPeriodLabel, formatDateRange, type TimePeriod } from '@/lib/dateFilters';
 import { useToast } from '@/components/toast';
+import { useAuth } from '@/lib/auth-context';
 
 const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
   { value: 'week', label: 'This Week' },
@@ -19,6 +20,7 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
 ];
 
 export default function DebtPage() {
+  const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('week');
   const [debtSummary, setDebtSummary] = useState<UserDebtSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,11 @@ export default function DebtPage() {
   }
 
   async function handlePaymentToggle(participantId: string, currentStatus: boolean) {
+    if (!user) {
+      addToast('Please login to manage payments', 'error');
+      return;
+    }
+
     try {
       await updateParticipantPaid(participantId, !currentStatus);
       await loadDebtSummary();
@@ -106,7 +113,10 @@ export default function DebtPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <div>
               <h1 className="text-3xl font-bold">Debt Summary</h1>
-              <p className="text-muted-foreground">Track unpaid amounts and manage payment status</p>
+              <p className="text-muted-foreground">
+                Track unpaid amounts and manage payment status
+                {!user && ' (read-only mode - login to edit)'}
+              </p>
             </div>
           </div>
 
@@ -221,21 +231,31 @@ export default function DebtPage() {
                                 ${participant.amount_per_person.toFixed(2)}
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePaymentToggle(participant.id, participant.is_paid);
-                                  }}
-                                  className="hover:bg-green-500/10 hover:text-green-600"
-                                >
-                                  {participant.is_paid ? (
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
-                                  ) : (
-                                    <Circle className="h-5 w-5" />
-                                  )}
-                                </Button>
+                                {user ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePaymentToggle(participant.id, participant.is_paid);
+                                    }}
+                                    className="hover:bg-green-500/10 hover:text-green-600"
+                                  >
+                                    {participant.is_paid ? (
+                                      <CheckCircle className="h-5 w-5 text-green-600" />
+                                    ) : (
+                                      <Circle className="h-5 w-5" />
+                                    )}
+                                  </Button>
+                                ) : (
+                                  <div className="flex justify-center">
+                                    {participant.is_paid ? (
+                                      <CheckCircle className="h-5 w-5 text-green-600" />
+                                    ) : (
+                                      <Circle className="h-5 w-5" />
+                                    )}
+                                  </div>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}
