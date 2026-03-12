@@ -1,15 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
 import Link from 'next/link';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Navigation } from '@/components/navigation';
-import { Calendar } from '@/components/calendar';
+import { Calendar, type UserDebt } from '@/components/calendar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getSessions, updateParticipantPaid } from '@/lib/db';
-import type { SessionWithParticipants } from '@/lib/db-types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { getSessions, getActiveUsers, updateParticipantPaid, createSession } from '@/lib/db';
+import type { SessionWithParticipants, User } from '@/lib/db-types';
 import { useToast } from '@/components/toast';
-import { CheckCircle, Circle, Users, ExternalLink, Lock } from 'lucide-react';
+import { CheckCircle, Circle, Users, ExternalLink, Lock, PlusCircle, Calendar as CalendarIcon, Coins, FileText } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
@@ -48,14 +60,26 @@ function getAvatarColor(name: string): string {
 export default function AdminPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [sessions, setSessions] = useState<SessionWithParticipants[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
   const { user } = useAuth();
   const isAuthenticated = !!user;
 
+  // Form state
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    totalAmount: '',
+    note: '',
+  });
+
   useEffect(() => {
     loadSessions();
+    loadUsers();
   }, []);
 
   async function loadSessions() {
@@ -70,6 +94,73 @@ export default function AdminPage() {
       setLoading(false);
     }
   }
+
+  async function loadUsers() {
+    try {
+      const data = await getActiveUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!user) {
+      addToast('Please login to create sessions', 'error');
+      return;
+    }
+
+    if (selectedUserIds.length === 0) {
+      setError('Please select at least one participant');
+      return;
+    }
+
+    if (!formData.totalAmount || parseFloat(formData.totalAmount) <= 0) {
+      setError('Please enter a valid total amount');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      await createSession(
+        formData.date,
+        parseFloat(formData.totalAmount),
+        selectedUserIds,
+        formData.note || undefined
+      );
+
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        totalAmount: '',
+        note: '',
+      });
+      setSelectedUserIds([]);
+      setIsDialogOpen(false);
+      await loadSessions();
+      addToast(`Session created with ${selectedUserIds.length} participant${selectedUserIds.length > 1 ? 's' : ''}`, 'success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create session');
+      addToast('Failed to create session', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function toggleUser(userId: string) {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  }
+
+  const amountPerPerson = formData.totalAmount && selectedUserIds.length > 0
+    ? parseFloat(formData.totalAmount) / selectedUserIds.length
+    : 0;
 
   async function handlePaymentToggle(
     participantId: string,
@@ -102,6 +193,52 @@ export default function AdminPage() {
     }
     sessionsByDate.get(dateKey)!.push(session);
   });
+
+  // Calculate total unpaid for current month
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const totalUnpaidThisMonth = sessions
+    .filter((s) => {
+      const sessionDate = new Date(s.date);
+      return sessionDate >= monthStart && sessionDate <= monthEnd;
+    })
+    .flatMap((s) => s.participants)
+    .filter((p) => !p.is_paid)
+    .reduce((sum, p) => sum + p.amount_per_person, 0);
+
+  // Calculate user debts for current month
+  const userDebtsMap = new Map<string, { userName: string; avatarUrl: string; totalUnpaid: number; unpaidCount: number }>();
+  sessions
+    .filter((s) => {
+      const sessionDate = new Date(s.date);
+      return sessionDate >= monthStart && sessionDate <= monthEnd;
+    })
+    .flatMap((s) => s.participants)
+    .filter((p) => !p.is_paid)
+    .forEach((p) => {
+      const userId = p.user_id;
+      if (!userDebtsMap.has(userId)) {
+        userDebtsMap.set(userId, {
+          userName: p.user.name,
+          avatarUrl: p.user.avatar_url || '',
+          totalUnpaid: 0,
+          unpaidCount: 0,
+        });
+      }
+      const debt = userDebtsMap.get(userId)!;
+      debt.totalUnpaid += p.amount_per_person;
+      debt.unpaidCount += 1;
+    });
+
+  const userDebts = Array.from(userDebtsMap.values())
+    .map(debt => ({
+      userId: debt.userName, // Using userName as userId since we need to derive it
+      userName: debt.userName,
+      avatarUrl: debt.avatarUrl,
+      totalUnpaid: debt.totalUnpaid,
+      unpaidCount: debt.unpaidCount,
+    }))
+    .sort((a, b) => b.totalUnpaid - a.totalUnpaid);
 
   function renderDaySessions(date: Date) {
     const dateKey = format(date, 'yyyy-MM-dd');
@@ -238,13 +375,147 @@ export default function AdminPage() {
     <>
       <Navigation />
       <div className="container mx-auto py-8 px-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            Session Calendar
-          </h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            View and manage sessions. Click on participant names to toggle payment status.
-          </p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+              Session Calendar
+            </h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+              View and manage sessions. Click on participant names to toggle payment status.
+            </p>
+          </div>
+          {user && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger render={<Button className="gap-2"><PlusCircle className="w-4 h-4" />New Session</Button>}>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>Create New Session</DialogTitle>
+                    <DialogDescription>
+                      Record a badminton session with participants and costs.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="py-4 space-y-4">
+                    {/* Date */}
+                    <div>
+                      <Label htmlFor="date" className="flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        Date
+                      </Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="mt-2"
+                        required
+                      />
+                    </div>
+
+                    {/* Total Amount */}
+                    <div>
+                      <Label htmlFor="totalAmount" className="flex items-center gap-2">
+                        <Coins className="w-4 h-4" />
+                        Total Amount
+                      </Label>
+                      <Input
+                        id="totalAmount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={formData.totalAmount}
+                        onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
+                        placeholder="0.00"
+                        className="mt-2"
+                        required
+                      />
+                    </div>
+
+                    {/* Participants */}
+                    <div>
+                      <Label className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Participants ({selectedUserIds.length})
+                      </Label>
+                      <div className="mt-2 space-y-2 max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
+                        {users.length === 0 ? (
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-2">
+                            No users available. Add users first.
+                          </p>
+                        ) : (
+                          users.map((user) => (
+                            <div key={user.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`user-${user.id}`}
+                                checked={selectedUserIds.includes(user.id)}
+                                onCheckedChange={() => toggleUser(user.id)}
+                              />
+                              <Label
+                                htmlFor={`user-${user.id}`}
+                                className="flex-1 cursor-pointer font-normal"
+                              >
+                                {user.name}
+                              </Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Amount per person preview */}
+                    {selectedUserIds.length > 0 && formData.totalAmount && (
+                      <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          Amount per person: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatCurrency(amountPerPerson)}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Note (optional) */}
+                    <div>
+                      <Label htmlFor="note" className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Note <span className="text-zinc-500 font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="note"
+                        type="text"
+                        value={formData.note}
+                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        placeholder="e.g., Court booking at ABC Sports"
+                        className="mt-2"
+                      />
+                    </div>
+
+                    {/* Error message */}
+                    {error && (
+                      <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm">
+                        {error}
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || selectedUserIds.length === 0 || !formData.totalAmount}
+                    >
+                      {isSubmitting ? 'Creating...' : 'Create Session'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Legend */}
@@ -277,6 +548,8 @@ export default function AdminPage() {
           currentMonth={currentMonth}
           onMonthChange={setCurrentMonth}
           renderDay={renderDaySessions}
+          totalUnpaid={totalUnpaidThisMonth}
+          userDebts={userDebts}
         />
 
         {/* Stats Summary */}

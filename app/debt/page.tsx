@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import type { UserDebtSummary } from '@/lib/db-types';
 import { getDebtSummaryByPeriod, updateParticipantPaid } from '@/lib/db';
-import { CheckCircle, Circle, DollarSign, Calendar } from 'lucide-react';
+import { CheckCircle, Circle, Coins, Calendar } from 'lucide-react';
 import { getDateRange, getPeriodLabel, formatDateRange, type TimePeriod } from '@/lib/dateFilters';
+import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth-context';
 
@@ -153,7 +154,7 @@ export default function DebtPage() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+              <Coins className="h-5 w-5" />
               Total Unpaid Debt
               <span className="text-sm font-normal text-muted-foreground ml-2">
                 ({getPeriodLabel(selectedPeriod)})
@@ -162,7 +163,7 @@ export default function DebtPage() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-destructive">
-              ${totalUnpaid.toFixed(2)}
+              {formatCurrency(totalUnpaid)}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               {debtSummary.length} {debtSummary.length === 1 ? 'user has' : 'users have'} unpaid debt
@@ -198,7 +199,7 @@ export default function DebtPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-destructive">
-                          ${userDebt.total_unpaid.toFixed(2)}
+                          {formatCurrency(userDebt.total_unpaid)}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {isExpanded ? 'Click to collapse' : 'Click to expand'}
@@ -228,7 +229,7 @@ export default function DebtPage() {
                                 {participant.session.note || '-'}
                               </TableCell>
                               <TableCell className="text-right font-medium">
-                                ${participant.amount_per_person.toFixed(2)}
+                                {formatCurrency(participant.amount_per_person)}
                               </TableCell>
                               <TableCell className="text-center">
                                 {user ? (

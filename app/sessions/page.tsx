@@ -24,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PlusCircle, Calendar, DollarSign, Users, FileText, Trash2 } from 'lucide-react';
+import { PlusCircle, Calendar, Coins, Users, FileText, Trash2 } from 'lucide-react';
 import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth-context';
@@ -259,7 +259,7 @@ export default function SessionsPage() {
                   {/* Total Amount */}
                   <div>
                     <Label htmlFor="totalAmount" className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
+                      <Coins className="w-4 h-4" />
                       Total Amount
                     </Label>
                     <Input
