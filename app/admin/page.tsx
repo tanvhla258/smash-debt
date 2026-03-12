@@ -1,0 +1,310 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import Link from 'next/link';
+import { Navigation } from '@/components/navigation';
+import { Calendar } from '@/components/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getSessions, updateParticipantPaid } from '@/lib/db';
+import type { SessionWithParticipants } from '@/lib/db-types';
+import { useToast } from '@/components/toast';
+import { CheckCircle, Circle, Users, ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Helper to get initials from name
+function getInitials(name: string): string {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+// Helper to generate a consistent color based on name
+function getAvatarColor(name: string): string {
+  const colors = [
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-green-500',
+    'bg-emerald-500',
+    'bg-teal-500',
+    'bg-cyan-500',
+    'bg-blue-500',
+    'bg-indigo-500',
+    'bg-violet-500',
+    'bg-purple-500',
+    'bg-pink-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+export default function AdminPage() {
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [sessions, setSessions] = useState<SessionWithParticipants[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  async function loadSessions() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getSessions();
+      setSessions(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load sessions');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePaymentToggle(
+    participantId: string,
+    currentStatus: boolean,
+    userName: string
+  ) {
+    try {
+      await updateParticipantPaid(participantId, !currentStatus);
+      await loadSessions();
+      addToast(
+        !currentStatus ? `${userName} marked as paid` : `${userName} marked as unpaid`,
+        !currentStatus ? 'success' : 'info'
+      );
+    } catch (err) {
+      addToast('Failed to update payment status', 'error');
+    }
+  }
+
+  // Group sessions by date
+  const sessionsByDate = new Map<string, SessionWithParticipants[]>();
+  sessions.forEach((session) => {
+    const dateKey = format(new Date(session.date), 'yyyy-MM-dd');
+    if (!sessionsByDate.has(dateKey)) {
+      sessionsByDate.set(dateKey, []);
+    }
+    sessionsByDate.get(dateKey)!.push(session);
+  });
+
+  function renderDaySessions(date: Date) {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const daySessions = sessionsByDate.get(dateKey) || [];
+
+    if (daySessions.length === 0) {
+      return null;
+    }
+
+    return daySessions.map((session) => {
+      const amountPerPerson = session.participants.length > 0
+        ? session.participants[0].amount_per_person
+        : 0;
+
+      return (
+        <div
+          key={session.id}
+          className="text-xs bg-blue-100 dark:bg-blue-900/30 rounded p-1.5 border border-blue-200 dark:border-blue-800 relative group"
+        >
+          {/* Header with note and external link */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="font-medium text-blue-900 dark:text-blue-100 truncate flex-1">
+              {session.note || 'Session'}
+            </div>
+            <Link
+              href={`/sessions`}
+              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
+              title="View sessions"
+            >
+              <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300" />
+            </Link>
+          </div>
+
+          {/* Amount per person */}
+          <div className="text-blue-700 dark:text-blue-300 mb-1.5 font-semibold">
+            ${amountPerPerson.toFixed(2)} / person
+          </div>
+
+          {/* Participants list */}
+          <div className="space-y-1">
+            {session.participants.map((participant) => (
+              <div
+                key={participant.id}
+                className="flex items-center gap-1.5 hover:bg-blue-200/50 dark:hover:bg-blue-800/50 rounded px-1 py-0.5 cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePaymentToggle(
+                    participant.id,
+                    participant.is_paid,
+                    participant.user.name
+                  );
+                }}
+              >
+                {/* Checkbox */}
+                <Checkbox
+                  checked={participant.is_paid}
+                  readOnly
+                  className="h-3 w-3 pointer-events-none flex-shrink-0"
+                />
+
+                {/* Avatar with initials */}
+                <div
+                  className={cn(
+                    'flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-medium text-white',
+                    getAvatarColor(participant.user.name)
+                  )}
+                >
+                  {getInitials(participant.user.name)}
+                </div>
+
+                {/* Name */}
+                <span
+                  className={cn(
+                    'truncate flex-1',
+                    participant.is_paid
+                      ? 'text-green-700 dark:text-green-400 line-through'
+                      : 'text-zinc-700 dark:text-zinc-300'
+                  )}
+                >
+                  {participant.user.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    });
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Navigation />
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex justify-center items-center py-12">
+            <div className="text-zinc-500 dark:text-zinc-400">Loading calendar...</div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navigation />
+        <div className="container mx-auto py-8 px-4">
+          <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+            <p className="font-semibold">Error</p>
+            <p>{error}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navigation />
+      <div className="container mx-auto py-8 px-4">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            Session Calendar
+          </h1>
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+            View and manage sessions. Click on participant names to toggle payment status.
+          </p>
+        </div>
+
+        {/* Legend */}
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded" />
+            <span className="text-zinc-600 dark:text-zinc-400">Session</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span className="text-zinc-600 dark:text-zinc-400">Paid</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Circle className="h-4 w-4 text-zinc-400" />
+            <span className="text-zinc-600 dark:text-zinc-400">Unpaid</span>
+          </div>
+          <div className="ml-auto text-zinc-500 dark:text-zinc-400 text-xs">
+            Click participant to toggle payment
+          </div>
+        </div>
+
+        <Calendar
+          currentWeek={currentWeek}
+          onWeekChange={setCurrentWeek}
+          renderDay={renderDaySessions}
+        />
+
+        {/* Stats Summary */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1">
+              <Users className="h-4 w-4" />
+              Total Sessions
+            </div>
+            <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              {sessions.length}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1">
+              <Circle className="h-4 w-4 text-amber-600" />
+              Unpaid This Week
+            </div>
+            <div className="text-2xl font-bold text-amber-600">
+              ${sessions
+                .filter((s) => {
+                  const sessionDate = new Date(s.date);
+                  const weekStart = new Date(currentWeek);
+                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                  const weekEnd = new Date(weekStart);
+                  weekEnd.setDate(weekEnd.getDate() + 6);
+                  return sessionDate >= weekStart && sessionDate <= weekEnd;
+                })
+                .flatMap((s) => s.participants)
+                .filter((p) => !p.is_paid)
+                .reduce((sum, p) => sum + p.amount_per_person, 0)
+                .toFixed(2)}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Collected This Week
+            </div>
+            <div className="text-2xl font-bold text-green-600">
+              ${sessions
+                .filter((s) => {
+                  const sessionDate = new Date(s.date);
+                  const weekStart = new Date(currentWeek);
+                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                  const weekEnd = new Date(weekStart);
+                  weekEnd.setDate(weekEnd.getDate() + 6);
+                  return sessionDate >= weekStart && sessionDate <= weekEnd;
+                })
+                .flatMap((s) => s.participants)
+                .filter((p) => p.is_paid)
+                .reduce((sum, p) => sum + p.amount_per_person, 0)
+                .toFixed(2)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
