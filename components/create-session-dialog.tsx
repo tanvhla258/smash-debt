@@ -43,6 +43,7 @@ export function CreateSessionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
+  const [includeMe, setIncludeMe] = useState(false);
   const { addToast } = useToast();
   const { user } = useAuth();
   const isAuthenticated = !!user;
@@ -114,7 +115,8 @@ export function CreateSessionDialog({
         formData.date,
         parseFloat(formData.totalAmount),
         selectedUserIds,
-        formData.note || undefined
+        formData.note || undefined,
+        includeMe
       );
 
       // Reset form
@@ -143,8 +145,9 @@ export function CreateSessionDialog({
     );
   }
 
-  const amountPerPerson = formData.totalAmount && selectedUserIds.length > 0
-    ? parseFloat(formData.totalAmount) / selectedUserIds.length
+  const divisor = includeMe ? selectedUserIds.length + 1 : selectedUserIds.length;
+  const amountPerPerson = formData.totalAmount && divisor > 0
+    ? parseFloat(formData.totalAmount) / divisor
     : 0;
 
   return (
@@ -228,11 +231,26 @@ export function CreateSessionDialog({
               </div>
             </div>
 
+            {/* Include me in calculation */}
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="include-me"
+                checked={includeMe}
+                onCheckedChange={(checked) => setIncludeMe(checked === true)}
+              />
+              <Label htmlFor="include-me" className="cursor-pointer">
+                Include me in calculation
+              </Label>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 ml-6">
+              You'll be included in the cost split but won't be tracked as a debtor
+            </p>
+
             {/* Amount per person preview */}
             {selectedUserIds.length > 0 && formData.totalAmount && (
               <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Amount per person: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatCurrency(amountPerPerson)}</span>
+                  Amount per person (÷{divisor}): <span className="font-semibold text-zinc-900 dark:text-zinc-100">{formatCurrency(amountPerPerson)}</span>
                 </p>
               </div>
             )}

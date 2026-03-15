@@ -13,6 +13,7 @@ import {
   updateSessionNote,
   updateParticipantAmount,
   deleteSession,
+  updateSessionIncludeCreator,
 } from '@/lib/db';
 import type { SessionWithParticipants, User } from '@/lib/db-types';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,7 @@ export default function SessionDetailPage() {
   // Edit states
   const [isEditingTotal, setIsEditingTotal] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isEditingIncludeCreator, setIsEditingIncludeCreator] = useState(false);
   const [editTotal, setEditTotal] = useState('');
   const [editNote, setEditNote] = useState('');
 
@@ -259,6 +261,38 @@ export default function SessionDetailPage() {
       addToast('Note updated successfully', 'success');
     } catch (err) {
       addToast('Failed to update note', 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function handleUpdateIncludeCreator() {
+    if (!session) return;
+
+    if (!isAuthenticated) {
+      addToast('Please login to edit session details', 'error');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const newIncludeCreator = !session.include_creator_in_calculation;
+      const newDivisor = newIncludeCreator ? session.participants.length + 1 : session.participants.length;
+      const newAmountPerPerson = session.total_amount / newDivisor;
+
+      // Update session flag
+      await updateSessionIncludeCreator(sessionId, newIncludeCreator);
+
+      // Update all participant amounts
+      for (const participant of session.participants) {
+        await updateParticipantAmount(participant.id, newAmountPerPerson);
+      }
+
+      await loadData();
+      setIsEditingIncludeCreator(false);
+      addToast(newIncludeCreator ? 'You are now included in calculation' : 'You are excluded from calculation', 'success');
+    } catch (err) {
+      addToast('Failed to update calculation', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -493,6 +527,30 @@ export default function SessionDetailPage() {
                       )}
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Include creator in calculation */}
+            <div className="flex items-start justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="include-creator"
+                  checked={session.include_creator_in_calculation}
+                  onCheckedChange={handleUpdateIncludeCreator}
+                  disabled={isUpdating || !isAuthenticated}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="include-creator" className={cn("text-sm font-medium", !isAuthenticated && "cursor-default")}>
+                    Include creator in calculation
+                  </Label>
+                  <p className="text-sm text-zinc-700 dark:text-zinc-300 mt-1">
+                    {session.include_creator_in_calculation ? (
+                      <span className="text-green-600 dark:text-green-400">Yes - Amount split by {session.participants.length + 1}</span>
+                    ) : (
+                      <span className="text-zinc-500">No - Amount split by {session.participants.length}</span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link';
-import { Users, Calendar, Home, Coins, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { Users, Calendar, Home, Coins, LayoutDashboard, LogOut, LogIn, List } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 
@@ -31,7 +31,7 @@ export function Navigation() {
               href="/sessions"
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
-              <Calendar className="w-4 h-4" />
+              <List className="w-4 h-4" />
               <span className="hidden sm:inline">Sessions</span>
             </Link>
             <Link

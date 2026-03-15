@@ -13,6 +13,7 @@ export interface Session {
   date: string; // ISO date string
   total_amount: number;
   note: string | null;
+  include_creator_in_calculation: boolean;
   created_at: string;
 }
 

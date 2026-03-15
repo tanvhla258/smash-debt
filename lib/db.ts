@@ -156,10 +156,12 @@ export async function createSession(
   date: string,
   totalAmount: number,
   participantIds: string[],
-  note?: string
+  note?: string,
+  includeCreatorInCalculation?: boolean
 ): Promise<Session> {
-  // Calculate amount per person
-  const amountPerPerson = totalAmount / participantIds.length;
+  // Calculate amount per person with n+1 if include creator
+  const divisor = includeCreatorInCalculation ? participantIds.length + 1 : participantIds.length;
+  const amountPerPerson = totalAmount / divisor;
 
   // Create the session
   const { data: session, error: sessionError } = await supabase
@@ -168,6 +170,7 @@ export async function createSession(
       date,
       total_amount: totalAmount,
       note: note || null,
+      include_creator_in_calculation: includeCreatorInCalculation || false,
     })
     .select()
     .single();
@@ -233,6 +236,21 @@ export async function updateSessionNote(
   const { data, error } = await supabase
     .from('sessions')
     .update({ note })
+    .eq('id', sessionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateSessionIncludeCreator(
+  sessionId: string,
+  includeCreatorInCalculation: boolean
+): Promise<Session> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .update({ include_creator_in_calculation: includeCreatorInCalculation })
     .eq('id', sessionId)
     .select()
     .single();
