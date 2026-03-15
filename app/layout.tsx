@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Badminton Tracker - Manage Sessions & Debt",
-  description: "Track badminton sessions, manage participants, and keep tabs on who owes what.",
+  title: "Smash Debt - Track Activities & Split Costs",
+  description: "Track group activities, manage participants, and settle up on who owes what.",
 };
 
 export default function RootLayout({
