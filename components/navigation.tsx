@@ -4,12 +4,17 @@ import Link from 'next/link';
 import { Users, Calendar, Home, Coins, LayoutDashboard, LogOut, LogIn, List } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-export function Navigation() {
+type NavigationProps = {
+  className?: string;
+};
+
+export function Navigation({ className }: NavigationProps) {
   const { user, signOut, loading } = useAuth();
 
   return (
-    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-10">
+    <nav className={cn("border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-10", className)}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
