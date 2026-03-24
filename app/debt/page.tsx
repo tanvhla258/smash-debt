@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Navigation } from '@/components/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -115,33 +114,25 @@ export default function DebtPage() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8">
           <p className="text-center text-muted-foreground">Loading debt summary...</p>
-        </div>
-      </>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <>
-        <Navigation />
-        <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8">
           <div className="bg-destructive/10 text-destructive p-4 rounded-md">
             <p className="font-semibold">Error</p>
             <p>{error}</p>
           </div>
-        </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navigation />
-      <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <div>
@@ -326,6 +317,5 @@ export default function DebtPage() {
           </div>
         )}
       </div>
-    </>
   );
 }

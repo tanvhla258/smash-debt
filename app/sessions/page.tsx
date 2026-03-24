@@ -25,7 +25,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { PlusCircle, Calendar, Coins, Users, FileText, Trash2 } from 'lucide-react';
-import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth-context';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -202,7 +201,6 @@ export default function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <Navigation />
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Navigation } from '@/components/navigation';
 import { Calendar, type UserDebt } from '@/components/calendar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -260,35 +259,27 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <>
-        <Navigation />
-        <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8 px-4">
           <div className="flex justify-center items-center py-12">
             <div className="text-zinc-500 dark:text-zinc-400">Loading calendar...</div>
           </div>
-        </div>
-      </>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <>
-        <Navigation />
-        <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8 px-4">
           <div className="bg-destructive/10 text-destructive p-4 rounded-md">
             <p className="font-semibold">Error</p>
             <p>{error}</p>
           </div>
-        </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navigation />
-      <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4">
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -399,6 +390,5 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }

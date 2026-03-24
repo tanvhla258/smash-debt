@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { UserPlus, Search, Check, Upload, X, Camera } from 'lucide-react';
-import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth-context';
 
@@ -206,7 +205,6 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <Navigation />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link';
-import { Users, Calendar, Home, Coins, LayoutDashboard, LogOut, LogIn, List } from 'lucide-react';
+import { Users, Calendar, Coins, LogOut, LogIn, List } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -58,7 +58,7 @@ export function Navigation({ className }: NavigationProps) {
             {!loading && (
               <>
                 {user ? (
-                  <div className="flex items-center gap-3 pl-2 border-l border-zinc-200 dark:border-zinc-700">
+                  <div className="flex items-center gap-4 pl-4 border-l border-zinc-200 dark:border-zinc-700">
                     <span className="text-sm text-zinc-600 dark:text-zinc-400 hidden sm:inline">
                       {user.email}
                     </span>
