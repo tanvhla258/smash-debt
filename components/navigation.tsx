@@ -53,13 +53,15 @@ export function Navigation({ className }: NavigationProps) {
               <Coins className="w-4 h-4" />
               <span className="hidden sm:inline">Debt</span>
             </Link>
-            <Link
-              href="/my-debt"
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <HandCoins className="w-4 h-4" />
-              <span className="hidden sm:inline">My Debt</span>
-            </Link>
+            {user && (
+              <Link
+                href="/my-debt"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <HandCoins className="w-4 h-4" />
+                <span className="hidden sm:inline">My Debt</span>
+              </Link>
+            )}
 
             {/* Auth section */}
             {!loading && (

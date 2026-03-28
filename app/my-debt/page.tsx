@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +11,11 @@ import { getMyDebts, createMyDebt, toggleMyDebtPaid, deleteMyDebt, getActiveUser
 import { CheckCircle, Circle, Trash2, Plus, HandCoins } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useToast } from '@/components/toast';
+import { useAuth } from '@/lib/auth-context';
 
 export default function MyDebtPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [debts, setDebts] = useState<MyDebtWithCreditor[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +28,12 @@ export default function MyDebtPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const { addToast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     loadData();
@@ -94,6 +104,14 @@ export default function MyDebtPage() {
   const totalUnpaid = debts
     .filter(d => !d.is_paid)
     .reduce((sum, d) => sum + d.amount, 0);
+
+  if (authLoading || (!user && !authLoading)) {
+    return (
+      <div className="container mx-auto py-8">
+        <p className="text-center text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
