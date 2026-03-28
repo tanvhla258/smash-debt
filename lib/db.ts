@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, Session, Participant, SessionWithParticipants, ParticipantWithDetails, UserDebtSummary } from './db-types';
+import type { User, Session, Participant, SessionWithParticipants, ParticipantWithDetails, UserDebtSummary, MyDebtWithCreditor } from './db-types';
 import type { DateRange } from './dateFilters';
 
 // ============ USER OPERATIONS ============
@@ -526,4 +526,60 @@ export async function getTopDebtors(
 export async function getRecentSessions(limit: number = 5): Promise<SessionWithParticipants[]> {
   const allSessions = await getSessions();
   return allSessions.slice(0, limit);
+}
+
+// ============ MY DEBTS OPERATIONS ============
+
+export async function getMyDebts(): Promise<MyDebtWithCreditor[]> {
+  const { data, error } = await supabase
+    .from('my_debts')
+    .select(`
+      *,
+      creditor:users!my_debts_creditor_id_fkey (*)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data as MyDebtWithCreditor[]) || [];
+}
+
+export async function createMyDebt(
+  creditorId: string,
+  amount: number,
+  note?: string
+): Promise<MyDebtWithCreditor> {
+  const { data, error } = await supabase
+    .from('my_debts')
+    .insert({
+      creditor_id: creditorId,
+      amount,
+      note: note || null,
+      is_paid: false,
+    })
+    .select(`
+      *,
+      creditor:users!my_debts_creditor_id_fkey (*)
+    `)
+    .single();
+
+  if (error) throw error;
+  return data as MyDebtWithCreditor;
+}
+
+export async function toggleMyDebtPaid(id: string, isPaid: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('my_debts')
+    .update({ is_paid: isPaid })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteMyDebt(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('my_debts')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link';
-import { Users, Calendar, Coins, LogOut, LogIn, List } from 'lucide-react';
+import { Users, Calendar, Coins, LogOut, LogIn, List, HandCoins } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,13 @@ export function Navigation({ className }: NavigationProps) {
             >
               <Coins className="w-4 h-4" />
               <span className="hidden sm:inline">Debt</span>
+            </Link>
+            <Link
+              href="/my-debt"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <HandCoins className="w-4 h-4" />
+              <span className="hidden sm:inline">My Debt</span>
             </Link>
 
             {/* Auth section */}

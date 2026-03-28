@@ -51,6 +51,20 @@ export interface UserDebtSummary {
   unpaid_participants: ParticipantWithDetails[];
 }
 
+// My Debts - debts owed by admin to other users
+export interface MyDebt {
+  id: string;
+  creditor_id: string;
+  amount: number;
+  note: string | null;
+  is_paid: boolean;
+  created_at: string;
+}
+
+export interface MyDebtWithCreditor extends MyDebt {
+  creditor: User;
+}
+
 // Dashboard statistics
 export interface DashboardStats {
   total_sessions_this_month: number;
