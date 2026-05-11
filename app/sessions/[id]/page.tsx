@@ -795,6 +795,5 @@ export default function SessionDetailPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }
