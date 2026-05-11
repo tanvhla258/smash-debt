@@ -8,12 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CreateSessionDialog } from '@/components/create-session-dialog';
-import { BadmintonSessionCreate } from '@/components/badminton-session-create';
-import { BreakfastSessionCreate } from '@/components/breakfast-session-create';
 import { getSessions, getActiveUsers, updateParticipantPaid } from '@/lib/db';
 import type { SessionWithParticipants, User } from '@/lib/db-types';
 import { useToast } from '@/components/toast';
-import { CheckCircle, Circle, Users, ExternalLink, Lock, Plus } from 'lucide-react';
+import { CheckCircle, Circle, Users, ExternalLink, Lock, Plus, PlusCircle, Coffee } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
@@ -291,8 +289,18 @@ export default function AdminPage() {
           </div>
           {user && (
             <div className="flex gap-2">
-              <BadmintonSessionCreate onSuccess={loadSessions} />
-              <BreakfastSessionCreate onSuccess={loadSessions} />
+              <CreateSessionDialog
+                defaultNote="Cau long"
+                defaultParticipants="all"
+                trigger={<Button className="gap-2"><PlusCircle className="w-4 h-4" />Badminton</Button>}
+                onSuccess={loadSessions}
+              />
+              <CreateSessionDialog
+                defaultNote="An sáng"
+                defaultParticipants="all"
+                trigger={<Button className="gap-2" variant="secondary"><Coffee className="w-4 h-4" />Breakfast</Button>}
+                onSuccess={loadSessions}
+              />
               <CreateSessionDialog
                 trigger={<Button variant="outline" className="gap-2"><Plus className="w-4 h-4" />Custom</Button>}
                 onSuccess={loadSessions}

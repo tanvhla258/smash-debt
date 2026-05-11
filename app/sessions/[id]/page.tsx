@@ -14,6 +14,7 @@ import {
   updateParticipantAmount,
   deleteSession,
   updateSessionIncludeCreator,
+  updateSessionDate,
 } from '@/lib/db';
 import type { SessionWithParticipants, User } from '@/lib/db-types';
 import { Button } from '@/components/ui/button';
@@ -36,9 +37,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Navigation } from '@/components/navigation';
 import { useToast } from '@/components/toast';
-import { ArrowLeft, CheckCircle, Circle, UserPlus, Trash2, Edit2, Save, X, Coins, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Circle, UserPlus, Trash2, Edit2, Save, X, Coins, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { formatCurrency, cn } from '@/lib/utils';
 
@@ -94,8 +94,10 @@ export default function SessionDetailPage() {
   const [isEditingTotal, setIsEditingTotal] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [isEditingIncludeCreator, setIsEditingIncludeCreator] = useState(false);
+  const [isEditingDate, setIsEditingDate] = useState(false);
   const [editTotal, setEditTotal] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [editDate, setEditDate] = useState('');
 
   useEffect(() => {
     loadData();
@@ -114,6 +116,7 @@ export default function SessionDetailPage() {
       if (sessionData) {
         setEditTotal(sessionData.total_amount.toString());
         setEditNote(sessionData.note || '');
+        setEditDate(sessionData.date);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load session');
@@ -266,6 +269,32 @@ export default function SessionDetailPage() {
     }
   }
 
+  async function handleUpdateDate() {
+    if (!session) return;
+
+    if (!isAuthenticated) {
+      addToast('Please login to edit session details', 'error');
+      return;
+    }
+
+    if (!editDate) {
+      addToast('Please select a valid date', 'error');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      await updateSessionDate(sessionId, editDate);
+      await loadData();
+      setIsEditingDate(false);
+      addToast('Date updated successfully', 'success');
+    } catch (err) {
+      addToast('Failed to update date', 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
   async function handleUpdateIncludeCreator() {
     if (!session) return;
 
@@ -337,12 +366,9 @@ export default function SessionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        <Navigation />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
-            Loading session...
-          </div>
+      <div className="max-w-4xl mx-auto px-4 py-8 min-h-screen">
+        <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+          Loading session...
         </div>
       </div>
     );
@@ -350,18 +376,15 @@ export default function SessionDetailPage() {
 
   if (error || !session) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black">
-        <Navigation />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 p-4 rounded-md">
-            <p className="font-semibold">Error</p>
-            <p>{error || 'Session not found'}</p>
-          </div>
-          <Button onClick={() => router.back()} className="mt-4 gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Go Back
-          </Button>
+      <div className="max-w-4xl mx-auto px-4 py-8 min-h-screen">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 p-4 rounded-md">
+          <p className="font-semibold">Error</p>
+          <p>{error || 'Session not found'}</p>
         </div>
+        <Button onClick={() => router.back()} className="mt-4 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -371,12 +394,10 @@ export default function SessionDetailPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <Navigation />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 min-h-screen">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <Button
                 variant="ghost"
@@ -386,9 +407,49 @@ export default function SessionDetailPage() {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Sessions
               </Button>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                {formatDate(session.date)}
-              </h1>
+              {isEditingDate ? (
+                <div className="flex items-center gap-2 mb-4">
+                  <Input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-auto"
+                    disabled={isUpdating}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleUpdateDate}
+                    disabled={isUpdating}
+                  >
+                    <Save className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsEditingDate(false);
+                      setEditDate(session.date);
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-4">
+                  <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                    {formatDate(session.date)}
+                  </h1>
+                  {isAuthenticated && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditingDate(true)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             {isAuthenticated && (
               <Button
@@ -396,7 +457,7 @@ export default function SessionDetailPage() {
                 size="sm"
                 onClick={handleDeleteSession}
                 disabled={isUpdating}
-                className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
                 title="Delete session"
               >
                 <Trash2 className="w-4 h-4" />

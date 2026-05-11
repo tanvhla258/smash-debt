@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Navigation } from '@/components/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,9 +46,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <Navigation />
-      <div className="flex items-center justify-center px-4 py-12">
+    <div className="flex items-center justify-center px-4 py-12 min-h-screen bg-zinc-50 dark:bg-black">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -161,6 +158,5 @@ export default function LoginPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
   )
 }

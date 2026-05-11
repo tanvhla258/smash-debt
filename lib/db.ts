@@ -259,6 +259,21 @@ export async function updateSessionIncludeCreator(
   return data;
 }
 
+export async function updateSessionDate(
+  sessionId: string,
+  date: string
+): Promise<Session> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .update({ date })
+    .eq('id', sessionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   const { error } = await supabase
     .from('sessions')
