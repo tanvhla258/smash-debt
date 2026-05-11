@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarPlus, Calendar, Coins, List, Users } from 'lucide-react';
+import { CalendarPlus, Calendar, Coins, List, Users, UtensilsCrossed } from 'lucide-react';
 import { CreateSessionDialog } from '@/components/create-session-dialog';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/sessions', icon: List, label: 'Sessions' },
   { href: '/users', icon: Users, label: 'Users' },
   { href: '/debt', icon: Coins, label: 'Debt' },
+  { href: '/breakfast', icon: UtensilsCrossed, label: 'Breakfast' },
 ];
 
 export function MobileBottomNav() {
@@ -66,7 +67,7 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        'flex flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors min-w-[56px]',
+        'flex flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors min-w-14',
         active
           ? 'text-zinc-900 dark:text-zinc-50'
           : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50'

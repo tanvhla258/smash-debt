@@ -72,3 +72,45 @@ export interface DashboardStats {
   total_unpaid_current_period: number;
   active_users_count: number;
 }
+
+// ============ BREAKFAST MENU TYPES ============
+
+export interface BreakfastItem {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string | null;
+  note_options: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BreakfastOrder {
+  id: string;
+  customer_name: string;
+  total_amount: number;
+  status: 'pending' | 'fulfilled';
+  created_at: string;
+}
+
+export interface BreakfastOrderItem {
+  id: string;
+  order_id: string;
+  item_id: string;
+  quantity: number;
+  custom_note: string | null;
+  created_at: string;
+}
+
+// Join types for queries
+export interface BreakfastOrderWithItems extends BreakfastOrder {
+  order_items: (BreakfastOrderItem & {
+    item: BreakfastItem;
+  })[];
+}
+
+export interface BreakfastOrderWithDetails extends BreakfastOrder {
+  order_items: (BreakfastOrderItem & {
+    item: BreakfastItem;
+  })[];
+}
