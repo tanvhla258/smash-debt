@@ -107,12 +107,12 @@ export function BreakfastOrdersList({ orders, loading, onRefresh }: BreakfastOrd
                     {formatCurrency(order.total_amount)}
                   </span>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger>
                       <Button variant="ghost" size="icon-sm">
                         <ChevronDown className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => handleToggleStatus(order)}>
                         {order.status === 'pending' ? 'Mark as fulfilled' : 'Mark as pending'}
                       </DropdownMenuItem>
