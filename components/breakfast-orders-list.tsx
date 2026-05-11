@@ -149,7 +149,7 @@ export function BreakfastOrdersList({ orders, loading, onRefresh }: BreakfastOrd
 
               {expandedOrders.has(order.id) && (
                 <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
-                  {order.order_items.map((orderItem) => (
+                  {order.breakfast_order_items.map((orderItem) => (
                     <div
                       key={orderItem.id}
                       className="flex justify-between items-start text-sm"

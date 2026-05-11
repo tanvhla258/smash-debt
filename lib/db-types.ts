@@ -104,13 +104,13 @@ export interface BreakfastOrderItem {
 
 // Join types for queries
 export interface BreakfastOrderWithItems extends BreakfastOrder {
-  order_items: (BreakfastOrderItem & {
+  breakfast_order_items: (BreakfastOrderItem & {
     item: BreakfastItem;
   })[];
 }
 
 export interface BreakfastOrderWithDetails extends BreakfastOrder {
-  order_items: (BreakfastOrderItem & {
+  breakfast_order_items: (BreakfastOrderItem & {
     item: BreakfastItem;
   })[];
 }

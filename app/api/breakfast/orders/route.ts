@@ -15,7 +15,7 @@ export async function GET() {
       .from('breakfast_orders')
       .select(`
         *,
-        order_items (
+        breakfast_order_items (
           *,
           item:breakfast_items (*)
         )

@@ -102,7 +102,7 @@ export async function getBreakfastOrders(): Promise<BreakfastOrderWithItems[]> {
     .from('breakfast_orders')
     .select(`
       *,
-      order_items (
+      breakfast_order_items (
         *,
         item:breakfast_items (*)
       )
@@ -118,7 +118,7 @@ export async function getBreakfastOrdersByStatus(status: 'pending' | 'fulfilled'
     .from('breakfast_orders')
     .select(`
       *,
-      order_items (
+      breakfast_order_items (
         *,
         item:breakfast_items (*)
       )
@@ -135,7 +135,7 @@ export async function getBreakfastOrderById(orderId: string): Promise<BreakfastO
     .from('breakfast_orders')
     .select(`
       *,
-      order_items (
+      breakfast_order_items (
         *,
         item:breakfast_items (*)
       )
