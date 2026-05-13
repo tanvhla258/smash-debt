@@ -17,7 +17,8 @@ export async function GET() {
         *,
         breakfast_order_items (
           *,
-          item:breakfast_items (*)
+          item:breakfast_items (*),
+          variant:breakfast_item_variants (*)
         )
       `)
       .order('created_at', { ascending: false });
