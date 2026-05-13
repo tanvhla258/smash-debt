@@ -5,13 +5,13 @@ import { UtensilsCrossed, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardAction } from '@/components/ui/card';
 import { cn, formatCurrency } from '@/lib/utils';
-import type { BreakfastItem } from '@/lib/db-types';
+import type { BreakfastItemWithVariants } from '@/lib/db-types';
 
 interface BreakfastItemCardProps {
-  item: BreakfastItem;
-  onSelect?: (item: BreakfastItem) => void;
-  onEdit?: (item: BreakfastItem) => void;
-  onDelete?: (item: BreakfastItem) => void;
+  item: BreakfastItemWithVariants;
+  onSelect?: (item: BreakfastItemWithVariants) => void;
+  onEdit?: (item: BreakfastItemWithVariants) => void;
+  onDelete?: (item: BreakfastItemWithVariants) => void;
   showActions?: boolean;
   quantity?: number;
 }
@@ -55,9 +55,18 @@ export function BreakfastItemCard({
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <h3 className="font-semibold text-base mb-1">{item.name}</h3>
-            <p className="text-lg font-bold text-green-600 dark:text-green-400">
-              {formatCurrency(item.price)}
-            </p>
+            <div className="space-y-0.5">
+              {item.variants?.map((v) => (
+                <p key={v.id} className="text-sm text-green-600 dark:text-green-400">
+                  {v.name}: <span className="font-bold">{formatCurrency(v.price)}</span>
+                </p>
+              ))}
+              {(!item.variants || item.variants.length === 0) && (
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {formatCurrency(item.price)}
+                </p>
+              )}
+            </div>
           </div>
           {quantity > 0 && (
             <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">

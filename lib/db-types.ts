@@ -97,20 +97,36 @@ export interface BreakfastOrderItem {
   id: string;
   order_id: string;
   item_id: string;
+  variant_id: string | null;
   quantity: number;
   custom_note: string | null;
   created_at: string;
+}
+
+export interface BreakfastItemVariant {
+  id: string;
+  item_id: string;
+  name: string;
+  price: number;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface BreakfastItemWithVariants extends BreakfastItem {
+  variants: BreakfastItemVariant[];
 }
 
 // Join types for queries
 export interface BreakfastOrderWithItems extends BreakfastOrder {
   breakfast_order_items: (BreakfastOrderItem & {
     item: BreakfastItem;
+    variant?: BreakfastItemVariant;
   })[];
 }
 
 export interface BreakfastOrderWithDetails extends BreakfastOrder {
   breakfast_order_items: (BreakfastOrderItem & {
     item: BreakfastItem;
+    variant?: BreakfastItemVariant;
   })[];
 }

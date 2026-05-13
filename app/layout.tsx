@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Figtree } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ToastProvider, Toast } from "@/components/toast";
@@ -7,17 +7,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { Navigation } from "@/components/navigation";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ['latin', 'vietnamese'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: "Smash Debt - Track Activities & Split Costs",
@@ -30,10 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", figtree.variable)}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={cn("font-sans", inter.variable)}>
+      <body className="antialiased">
         <AuthProvider>
           <ToastProvider>
             <div className="min-h-screen bg-zinc-50 dark:bg-black pb-24 sm:pb-0">

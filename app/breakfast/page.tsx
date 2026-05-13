@@ -9,20 +9,20 @@ import { BreakfastOrdersList } from '@/components/breakfast-orders-list';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/toast';
 import { Plus, ShoppingBag, UtensilsCrossed } from 'lucide-react';
-import type { BreakfastItem } from '@/lib/db-types';
+import type { BreakfastItemWithVariants, BreakfastItem } from '@/lib/db-types';
 import type { BreakfastOrderWithItems } from '@/lib/db-types';
 import { formatCurrency } from '@/lib/utils';
 
 export default function BreakfastPage() {
   const { user } = useAuth();
   const { addToast } = useToast();
-  const [items, setItems] = useState<BreakfastItem[]>([]);
+  const [items, setItems] = useState<BreakfastItemWithVariants[]>([]);
   const [orders, setOrders] = useState<BreakfastOrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<BreakfastItem | null>(null);
+  const [editingItem, setEditingItem] = useState<BreakfastItemWithVariants | null>(null);
   const [selectedItems, setSelectedItems] = useState<Map<string, number>>(new Map());
 
   // Fetch menu items
@@ -252,7 +252,9 @@ export default function BreakfastPage() {
   const totalAmount = activeItems.reduce(
     (sum, item) => {
       const qty = selectedItems.get(item.id) || 0;
-      return sum + item.price * qty;
+      const defaultVariant = item.variants?.find(v => v.is_default);
+      const price = defaultVariant?.price ?? item.variants?.[0]?.price ?? item.price;
+      return sum + price * qty;
     },
     0
   );
@@ -367,7 +369,9 @@ export default function BreakfastPage() {
                     >
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-zinc-500">{formatCurrency(item.price)}</p>
+                        <p className="text-sm text-zinc-500">
+                          {item.variants?.map(v => `${v.name}: ${formatCurrency(v.price)}`).join(' · ') || formatCurrency(item.price)}
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button

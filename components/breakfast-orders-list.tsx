@@ -149,26 +149,33 @@ export function BreakfastOrdersList({ orders, loading, onRefresh }: BreakfastOrd
 
               {expandedOrders.has(order.id) && (
                 <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
-                  {order.breakfast_order_items.map((orderItem) => (
-                    <div
-                      key={orderItem.id}
-                      className="flex justify-between items-start text-sm"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {orderItem.quantity}x {orderItem.item.name}
-                        </p>
-                        {orderItem.custom_note && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            Note: {orderItem.custom_note}
+                  {order.breakfast_order_items.map((orderItem) => {
+                    const price = orderItem.variant ? orderItem.variant.price : orderItem.item.price;
+                    const displayName = orderItem.variant
+                      ? `${orderItem.item.name} (${orderItem.variant.name})`
+                      : orderItem.item.name;
+
+                    return (
+                      <div
+                        key={orderItem.id}
+                        className="flex justify-between items-start text-sm"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {orderItem.quantity}x {displayName}
                           </p>
-                        )}
+                          {orderItem.custom_note && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                              Note: {orderItem.custom_note}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-medium text-zinc-600 dark:text-zinc-400">
+                          {formatCurrency(price * orderItem.quantity)}
+                        </span>
                       </div>
-                      <span className="font-medium text-zinc-600 dark:text-zinc-400">
-                        {formatCurrency(orderItem.item.price * orderItem.quantity)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

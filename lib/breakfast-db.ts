@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { BreakfastItem, BreakfastOrder, BreakfastOrderItem, BreakfastOrderWithItems, BreakfastOrderWithDetails } from './db-types';
+import type { BreakfastItem, BreakfastOrder, BreakfastOrderItem, BreakfastOrderWithItems, BreakfastOrderWithDetails, BreakfastItemVariant, BreakfastItemWithVariants } from './db-types';
 
 // ============ BREAKFAST ITEM OPERATIONS ============
 
@@ -104,7 +104,8 @@ export async function getBreakfastOrders(): Promise<BreakfastOrderWithItems[]> {
       *,
       breakfast_order_items (
         *,
-        item:breakfast_items (*)
+        item:breakfast_items (*),
+        variant:breakfast_item_variants (*)
       )
     `)
     .order('created_at', { ascending: false });
@@ -120,7 +121,8 @@ export async function getBreakfastOrdersByStatus(status: 'pending' | 'fulfilled'
       *,
       breakfast_order_items (
         *,
-        item:breakfast_items (*)
+        item:breakfast_items (*),
+        variant:breakfast_item_variants (*)
       )
     `)
     .eq('status', status)
@@ -137,7 +139,8 @@ export async function getBreakfastOrderById(orderId: string): Promise<BreakfastO
       *,
       breakfast_order_items (
         *,
-        item:breakfast_items (*)
+        item:breakfast_items (*),
+        variant:breakfast_item_variants (*)
       )
     `)
     .eq('id', orderId)
@@ -154,26 +157,38 @@ export async function createBreakfastOrder(
   customerName: string,
   items: Array<{
     item_id: string;
+    variant_id: string | null;
     quantity: number;
     custom_note?: string;
   }>
 ): Promise<BreakfastOrder> {
-  // Calculate total amount by fetching item prices
+  // Fetch items with their variants for pricing
   const itemIds = items.map(i => i.item_id);
   const { data: breakfastItems, error: itemsError } = await supabase
     .from('breakfast_items')
-    .select('id, price')
+    .select(`
+      *,
+      breakfast_item_variants (*)
+    `)
     .in('id', itemIds);
 
   if (itemsError) throw itemsError;
 
-  const priceMap = new Map(breakfastItems?.map(item => [item.id, item.price]) || []);
+  const itemsMap = new Map(breakfastItems?.map(item => [item.id, item]) || []);
   let totalAmount = 0;
 
-  for (const item of items) {
-    const price = priceMap.get(item.item_id);
-    if (!price) throw new Error(`Item ${item.item_id} not found`);
-    totalAmount += price * item.quantity;
+  for (const orderItem of items) {
+    const item = itemsMap.get(orderItem.item_id);
+    if (!item) throw new Error(`Item ${orderItem.item_id} not found`);
+
+    // Use variant price if specified, otherwise use item base price
+    let price = item.price;
+    if (orderItem.variant_id && item.breakfast_item_variants) {
+      const variant = item.breakfast_item_variants.find((v: BreakfastItemVariant) => v.id === orderItem.variant_id);
+      if (variant) price = variant.price;
+    }
+
+    totalAmount += price * orderItem.quantity;
   }
 
   // Create the order
@@ -189,10 +204,11 @@ export async function createBreakfastOrder(
 
   if (orderError) throw orderError;
 
-  // Create order items
+  // Create order items with variant_id
   const orderItems = items.map(item => ({
     order_id: order.id,
     item_id: item.item_id,
+    variant_id: item.variant_id,
     quantity: item.quantity,
     custom_note: item.custom_note || null,
   }));
@@ -289,4 +305,120 @@ export async function deleteBreakfastImage(imageUrl: string): Promise<void> {
     // If URL parsing fails, ignore the error
     // The image might be an external URL
   }
+}
+
+// ============ BREAKFAST ITEM VARIANT OPERATIONS ============
+
+export async function getBreakfastItemVariants(itemId: string): Promise<BreakfastItemVariant[]> {
+  const { data, error } = await supabase
+    .from('breakfast_item_variants')
+    .select('*')
+    .eq('item_id', itemId)
+    .order('is_default', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getBreakfastItemWithVariants(itemId: string): Promise<BreakfastItemWithVariants | null> {
+  const { data, error } = await supabase
+    .from('breakfast_items')
+    .select(`
+      *,
+      breakfast_item_variants (*)
+    `)
+    .eq('id', itemId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return data as BreakfastItemWithVariants;
+}
+
+export async function createBreakfastVariant(
+  itemId: string,
+  name: string,
+  price: number,
+  isDefault: boolean = false
+): Promise<BreakfastItemVariant> {
+  const { data, error } = await supabase
+    .from('breakfast_item_variants')
+    .insert({
+      item_id: itemId,
+      name,
+      price,
+      is_default: isDefault,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBreakfastVariant(
+  variantId: string,
+  updates: { name?: string; price?: number; is_default?: boolean }
+): Promise<BreakfastItemVariant> {
+  const { data, error } = await supabase
+    .from('breakfast_item_variants')
+    .update(updates)
+    .eq('id', variantId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBreakfastVariant(variantId: string): Promise<void> {
+  const { error } = await supabase
+    .from('breakfast_item_variants')
+    .delete()
+    .eq('id', variantId);
+
+  if (error) throw error;
+}
+
+export async function setDefaultVariant(itemId: string, variantId: string): Promise<void> {
+  // Remove default from all variants of this item
+  await supabase
+    .from('breakfast_item_variants')
+    .update({ is_default: false })
+    .eq('item_id', itemId);
+
+  // Set new default
+  await supabase
+    .from('breakfast_item_variants')
+    .update({ is_default: true })
+    .eq('id', variantId);
+}
+
+export async function getAllBreakfastItemsWithVariants(): Promise<BreakfastItemWithVariants[]> {
+  const { data, error } = await supabase
+    .from('breakfast_items')
+    .select(`
+      *,
+      breakfast_item_variants (*)
+    `)
+    .order('name');
+
+  if (error) throw error;
+  return (data as BreakfastItemWithVariants[]) || [];
+}
+
+export async function getActiveBreakfastItemsWithVariants(): Promise<BreakfastItemWithVariants[]> {
+  const { data, error } = await supabase
+    .from('breakfast_items')
+    .select(`
+      *,
+      breakfast_item_variants (*)
+    `)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) throw error;
+  return (data as BreakfastItemWithVariants[]) || [];
 }

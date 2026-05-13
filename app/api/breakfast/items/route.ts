@@ -12,7 +12,10 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('breakfast_items')
-      .select('*')
+      .select(`
+        *,
+        variants:breakfast_item_variants (*)
+      `)
       .order('name');
 
     if (error) throw error;
