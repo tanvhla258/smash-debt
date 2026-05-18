@@ -396,8 +396,52 @@ export async function getDebtSummary(): Promise<UserDebtSummary[]> {
     }
   }
 
-  // Convert to array and sort by total amount (descending)
-  return Array.from(userMap.values()).sort((a, b) => b.total_unpaid - a.total_unpaid);
+  // Convert to array and sort by name (A-Z)
+  return Array.from(userMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
+}
+
+// Bulk update all unpaid participants within a date range
+export async function updateAllParticipantsPaidInPeriod(
+  dateRange: DateRange | null,
+  isPaid: boolean
+): Promise<void> {
+  if (!dateRange) {
+    // Update ALL unpaid participants
+    const { error } = await supabase
+      .from('participants')
+      .update({ is_paid: isPaid })
+      .eq('is_paid', !isPaid);
+
+    if (error) throw error;
+    return;
+  }
+
+  // Use YYYY-MM-DD format to avoid timezone conversion issues
+  const startDate = dateRange.start.toISOString().split('T')[0];
+  const endDate = dateRange.end.toISOString().split('T')[0];
+
+  // First, get session IDs within the date range
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('sessions')
+    .select('id')
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (sessionsError) throw sessionsError;
+
+  const sessionIds = sessions?.map(s => s.id) || [];
+  if (sessionIds.length === 0) {
+    return; // No sessions in this date range
+  }
+
+  // Update all unpaid participants for those sessions
+  const { error } = await supabase
+    .from('participants')
+    .update({ is_paid: isPaid })
+    .eq('is_paid', !isPaid)
+    .in('session_id', sessionIds);
+
+  if (error) throw error;
 }
 
 // Get unpaid participants with date filtering
@@ -478,8 +522,8 @@ export async function getDebtSummaryByPeriod(
     }
   }
 
-  // Convert to array and sort by total amount (descending)
-  return Array.from(userMap.values()).sort((a, b) => b.total_unpaid - a.total_unpaid);
+  // Convert to array and sort by name (A-Z)
+  return Array.from(userMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
 }
 
 // ============ ADMIN DASHBOARD STATISTICS ============
