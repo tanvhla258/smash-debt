@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ToastProvider, Toast } from "@/components/toast";
 import { AuthProvider } from "@/lib/auth-context";
 import { Navigation } from "@/components/navigation";
+import { MobileHeader } from "@/components/mobile-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 const inter = Inter({ subsets: ['latin', 'vietnamese'], variable: '--font-sans' });
@@ -24,7 +25,8 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <ToastProvider>
-            <div className="min-h-screen bg-zinc-50 dark:bg-black pb-24 sm:pb-0">
+            <div className="min-h-screen bg-zinc-50 dark:bg-black pt-14 pb-24 sm:pt-0 sm:pb-0">
+              <MobileHeader />
               <Navigation className="hidden sm:block" />
               {children}
             </div>

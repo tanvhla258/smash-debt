@@ -2,18 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarPlus, Calendar, Coins, List, Users, UtensilsCrossed } from 'lucide-react';
+import { CalendarPlus, Coins, List } from 'lucide-react';
 import { CreateSessionDialog } from '@/components/create-session-dialog';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
-const navItems = [
-  { href: '/admin', icon: Calendar, label: 'Calendar' },
-  { href: '/sessions', icon: List, label: 'Sessions' },
-  { href: '/users', icon: Users, label: 'Users' },
-  { href: '/debt', icon: Coins, label: 'Debt' },
-  { href: '/breakfast', icon: UtensilsCrossed, label: 'Breakfast' },
-];
+const leftNavItem = { href: '/debt', icon: Coins, label: 'Debt' };
+const rightNavItem = { href: '/sessions', icon: List, label: 'Sessions' };
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -22,9 +17,12 @@ export function MobileBottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/95 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 sm:hidden">
       <div className="mx-auto flex max-w-5xl items-center justify-around px-1 py-1.5">
-        {navItems.slice(0, 2).map(item => (
-          <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} active={pathname === item.href || pathname.startsWith(item.href + '/')} />
-        ))}
+        <NavLink
+          href={leftNavItem.href}
+          icon={leftNavItem.icon}
+          label={leftNavItem.label}
+          active={pathname === leftNavItem.href || pathname.startsWith(leftNavItem.href + '/')}
+        />
 
         {/* Center create button - only for authenticated users */}
         {user ? (
@@ -44,9 +42,12 @@ export function MobileBottomNav() {
           <div className="w-14" />
         )}
 
-        {navItems.slice(2).map(item => (
-          <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} active={pathname === item.href} />
-        ))}
+        <NavLink
+          href={rightNavItem.href}
+          icon={rightNavItem.icon}
+          label={rightNavItem.label}
+          active={pathname === rightNavItem.href || pathname.startsWith(rightNavItem.href + '/')}
+        />
       </div>
     </nav>
   );
