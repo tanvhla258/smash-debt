@@ -19,9 +19,11 @@ export function Navigation({ className }: NavigationProps) {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                Smash dept
-              </h1>
+              <img
+                src="/logo.png"
+                alt="Smash Debt"
+                className="h-8 w-auto"
+              />
             </Link>
           </div>
           <div className="flex items-center space-x-4">

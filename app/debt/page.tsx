@@ -61,7 +61,7 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
 
 export default function DebtPage() {
   const { user } = useAuth();
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('all');
   const [debtSummary, setDebtSummary] = useState<UserDebtSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

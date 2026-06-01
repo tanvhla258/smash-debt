@@ -35,8 +35,12 @@ export function MobileHeader() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-zinc-200/80 bg-white/95 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 sm:hidden">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-          Smash dept
+        <Link href="/" className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="Smash Debt"
+            className="h-8 w-auto"
+          />
         </Link>
 
         {/* Sheet drawer menu */}
